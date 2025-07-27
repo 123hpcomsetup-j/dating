@@ -21,3 +21,5 @@ This repository contains a simple full-stack web application for an online datin
 4. Open `client/index.html` in a browser.
 
 The server stores users in `server/database.sqlite` and exposes `/signup`, `/login`, and `/profile` endpoints.
+
+On first run the database is seeded with one admin user and ten provider accounts. The default admin credentials are `admin@loveable.dev` / `Admin@123`. Providers use emails `provider1@loveable.dev` to `provider10@loveable.dev` with password `Pass@123`.
