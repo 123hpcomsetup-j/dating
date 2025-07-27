@@ -13,6 +13,27 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('../client'));
 
+// simple in-memory data for calls and reviews
+const incomingCalls = {};
+const callHistory = {};
+const reviews = {};
+
+function ensureProviderData(id) {
+  if (!incomingCalls[id]) {
+    incomingCalls[id] = [
+      { id: uuidv4(), user: 'Alice', type: 'video' },
+      { id: uuidv4(), user: 'Bob', type: 'audio' },
+    ];
+  }
+  if (!callHistory[id]) callHistory[id] = [];
+  if (!reviews[id]) {
+    reviews[id] = [
+      { user: 'Sam', rating: 4, comment: 'Great chat!' },
+      { user: 'Jane', rating: 5, comment: 'Very helpful' },
+    ];
+  }
+}
+
 // Signup endpoint
 app.post('/signup', async (req, res) => {
   const { name, email, password, role, location, profilePhoto } = req.body;
@@ -58,12 +79,55 @@ function auth(role) {
   };
 }
 
-// Protected route example
+// Get current profile
 app.get('/profile', auth(), (req, res) => {
   db.get('SELECT id, name, email, role, location, profilePhoto, isOnline FROM users WHERE id = ?', [req.user.id], (err, user) => {
     if (err || !user) return res.sendStatus(404);
     res.json(user);
   });
+});
+
+// Update online status
+app.post('/status', auth('provider'), (req, res) => {
+  const { isOnline } = req.body;
+  db.run('UPDATE users SET isOnline = ? WHERE id = ?', [isOnline ? 1 : 0, req.user.id], function (err) {
+    if (err) return res.status(500).json({ error: 'Status update failed' });
+    res.json({ isOnline });
+  });
+});
+
+// Get incoming calls
+app.get('/calls', auth('provider'), (req, res) => {
+  ensureProviderData(req.user.id);
+  res.json(incomingCalls[req.user.id]);
+});
+
+// Accept or reject a call
+app.post('/calls/:id/:action', auth('provider'), (req, res) => {
+  ensureProviderData(req.user.id);
+  const { id, action } = req.params;
+  const calls = incomingCalls[req.user.id];
+  const idx = calls.findIndex((c) => c.id === id);
+  if (idx === -1) return res.sendStatus(404);
+  const call = calls.splice(idx, 1)[0];
+  callHistory[req.user.id].push({
+    ...call,
+    accepted: action === 'accept',
+    duration: Math.floor(Math.random() * 10) + 1,
+  });
+  res.json({ ok: true });
+});
+
+// Call history
+app.get('/history', auth('provider'), (req, res) => {
+  ensureProviderData(req.user.id);
+  res.json(callHistory[req.user.id]);
+});
+
+// Reviews
+app.get('/reviews', auth('provider'), (req, res) => {
+  ensureProviderData(req.user.id);
+  res.json(reviews[req.user.id]);
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -11,7 +11,76 @@
   <div id="root"></div>
   <script type="text/babel">
     function Provider() {
-      return <h2>Provider Dashboard</h2>;
+      const [profile, setProfile] = React.useState(null);
+      const [calls, setCalls] = React.useState([]);
+      const [history, setHistory] = React.useState([]);
+      const [reviews, setReviews] = React.useState([]);
+
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+      const loadData = async () => {
+        const p = await fetch('/profile', { headers }).then(r => r.json());
+        setProfile(p);
+        const c = await fetch('/calls', { headers }).then(r => r.json());
+        setCalls(c);
+        const h = await fetch('/history', { headers }).then(r => r.json());
+        setHistory(h);
+        const rev = await fetch('/reviews', { headers }).then(r => r.json());
+        setReviews(rev);
+      };
+
+      React.useEffect(() => { loadData(); }, []);
+
+      const toggleStatus = async () => {
+        const res = await fetch('/status', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ isOnline: !profile.isOnline })
+        });
+        const data = await res.json();
+        setProfile({ ...profile, isOnline: data.isOnline });
+      };
+
+      const handleCall = async (id, action) => {
+        await fetch(`/calls/${id}/${action}`, { method: 'POST', headers });
+        const c = await fetch('/calls', { headers }).then(r => r.json());
+        setCalls(c);
+        const h = await fetch('/history', { headers }).then(r => r.json());
+        setHistory(h);
+      };
+
+      if (!profile) return <p>Loading...</p>;
+
+      return (
+        <div>
+          <h2>Welcome, {profile.name}</h2>
+          <p>Status: {profile.isOnline ? 'Online' : 'Offline'} <button onClick={toggleStatus}>Toggle</button></p>
+          <h3>Incoming Calls</h3>
+          {calls.length === 0 && <p>No calls</p>}
+          <ul>
+            {calls.map(c => (
+              <li key={c.id}>
+                {c.user} ({c.type})
+                <button onClick={() => handleCall(c.id, 'accept')}>Accept</button>
+                <button onClick={() => handleCall(c.id, 'reject')}>Reject</button>
+              </li>
+            ))}
+          </ul>
+          <h3>Call History</h3>
+          <ul>
+            {history.map((h, idx) => (
+              <li key={idx}>{h.user} - {h.type} - {h.accepted ? 'accepted' : 'rejected'} - {h.duration} min</li>
+            ))}
+          </ul>
+          <h3>Reviews</h3>
+          <ul>
+            {reviews.map((r, idx) => (
+              <li key={idx}>{r.user}: {r.comment} (Rating: {r.rating}/5)</li>
+            ))}
+          </ul>
+        </div>
+      );
     }
     ReactDOM.render(<Provider />, document.getElementById('root'));
   </script>
