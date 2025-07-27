@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Signup</title>
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  <script crossorigin src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    function Signup() {
+      const [form, setForm] = React.useState({name:'', email:'', password:'', role:'user', location:'', profilePhoto:''});
+      const handleChange = e => setForm({...form, [e.target.name]: e.target.value});
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        const res = await fetch('/signup', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(form)
+        });
+        const data = await res.json();
+        if (data.id) {
+          alert('Signup success! Please login.');
+          window.location.href = 'index.html';
+        } else {
+          alert(data.error || 'Signup failed');
+        }
+      };
+      return (
+        <form onSubmit={handleSubmit}>
+          <h2>Signup</h2>
+          <input name="name" value={form.name} onChange={handleChange} placeholder="Name" required />
+          <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" required />
+          <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Password" required />
+          <select name="role" value={form.role} onChange={handleChange}>
+            <option value="user">User</option>
+            <option value="provider">Provider</option>
+            <option value="admin">Admin</option>
+          </select>
+          <input name="location" value={form.location} onChange={handleChange} placeholder="Location" />
+          <input name="profilePhoto" value={form.profilePhoto} onChange={handleChange} placeholder="Profile Photo URL" />
+          <button type="submit">Signup</button>
+          <p>Already have an account? <a href="index.html">Login</a></p>
+        </form>
+      );
+    }
+    ReactDOM.render(<Signup />, document.getElementById('root'));
+  </script>
+</body>
+</html>
